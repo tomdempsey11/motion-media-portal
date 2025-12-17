@@ -1,7 +1,36 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../api";
 
 function Login() {
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [error, setError] = useState("");
+
+  const onChange = (e) => {
+    setForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      await api.post("/api/auth/login", form);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err?.response?.data?.message || "Login failed");
+    }
+  };
+
   return (
     <section className="auth-page">
       <div className="auth-card">
@@ -10,15 +39,33 @@ function Login() {
           Log in to view your projects, submit new requests, and track delivery.
         </p>
 
-        <form className="auth-form">
+        {error && (
+          <p style={{ color: "crimson", marginBottom: "1rem" }}>
+            {error}
+          </p>
+        )}
+
+        <form className="auth-form" onSubmit={onSubmit}>
           <label>
             Email
-            <input type="email" placeholder="you@example.com" />
+            <input
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={onChange}
+            />
           </label>
 
           <label>
             Password
-            <input type="password" placeholder="••••••••" />
+            <input
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={onChange}
+            />
           </label>
 
           <button type="submit" className="btn btn-primary auth-form__submit">
