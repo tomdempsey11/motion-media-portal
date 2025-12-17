@@ -9,6 +9,23 @@ router.get("/ping", (req, res) => {
 });
 
 
+router.get("/me", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = await User.findById(req.session.userId).select("_id name email role");
+    if (!user) return res.status(401).json({ message: "Not authenticated" });
+
+    res.json({ user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 // POST /api/auth/signup
 router.post("/signup", async (req, res) => {
   try {

@@ -425,3 +425,40 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+
+/* ==============================
+   Status badges (Request status)
+   ============================== */
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: capitalize;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.status-pending {
+  background: rgba(160, 160, 160, 0.15);
+  color: #cfcfcf;
+}
+
+.status-in_progress {
+  background: rgba(60, 140, 255, 0.18);
+  color: #9cc3ff;
+}
+
+.status-completed {
+  background: rgba(60, 200, 120, 0.18);
+  color: #8ef0b7;
+}
+
+.status-cancelled {
+  background: rgba(255, 80, 80, 0.18);
+  color: #ffb2b2;
+}

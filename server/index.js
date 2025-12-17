@@ -7,8 +7,6 @@ require("dotenv").config();
 const connectDB = require("./config/db");
 
 const app = express();
-
-// Config
 const PORT = process.env.PORT || 5001;
 
 // Connect to MongoDB
@@ -24,15 +22,13 @@ app.use(
 
 app.use(express.json());
 
-
 app.use((req, res, next) => {
   console.log("➡️", req.method, req.path);
   res.setHeader("X-MotionMedia-API", "true");
   next();
 });
 
-
-// Sessions (stored in MongoDB)
+// Sessions (stored in MongoDB) ✅ MUST be before routes that need req.session
 app.use(
   session({
     name: "motionmedia.sid",
@@ -45,26 +41,25 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      secure: false, // set true only when you deploy with HTTPS
+      secure: false,
       sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   })
 );
+
+
+app.use("/api/admin", require("./routes/admin"));
+
 
 // Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Motion Media API is running" });
 });
 
-console.log("📌 Loading auth routes from:", require.resolve("./routes/auth"));
-console.log("📌 Auth router type:", typeof require("./routes/auth"));
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/requests", require("./routes/requests"));
 
-console.log("✅ Mounted /api/auth router");
-
-
-// Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });

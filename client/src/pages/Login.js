@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -24,8 +26,22 @@ function Login() {
     setError("");
 
     try {
-      await api.post("/api/auth/login", form);
-      navigate("/dashboard");
+      // ✅ 1) Login (baseURL already includes /api)
+      await api.post("/auth/login", form);
+
+      // ✅ 2) Refresh context user
+      await refreshUser();
+
+      // ✅ 3) Get role from /me (guaranteed in sync with cookies)
+      const meRes = await api.get("/auth/me");
+      const role = meRes?.data?.user?.role;
+
+      // ✅ 4) Redirect
+      if (role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err?.response?.data?.message || "Login failed");
     }
@@ -40,9 +56,7 @@ function Login() {
         </p>
 
         {error && (
-          <p style={{ color: "crimson", marginBottom: "1rem" }}>
-            {error}
-          </p>
+          <p style={{ color: "crimson", marginBottom: "1rem" }}>{error}</p>
         )}
 
         <form className="auth-form" onSubmit={onSubmit}>
@@ -74,8 +88,7 @@ function Login() {
         </form>
 
         <p className="auth-page__footer">
-          Don&apos;t have an account?{" "}
-          <Link to="/signup">Create one here</Link>.
+          Don&apos;t have an account? <Link to="/signup">Create one here</Link>.
         </p>
       </div>
     </section>

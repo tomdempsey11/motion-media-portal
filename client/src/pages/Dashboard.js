@@ -1,7 +1,52 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 function Dashboard() {
+  const navigate = useNavigate();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadRequests = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await fetch("http://localhost:5001/api/requests", {
+          method: "GET",
+          credentials: "include", // ✅ session cookie
+        });
+
+        if (res.status === 401) {
+          navigate("/login");
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error("Failed to load requests");
+        }
+
+        const data = await res.json();
+        setRequests(data.requests || []);
+      } catch (err) {
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRequests();
+  }, [navigate]);
+
+  const formatDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString();
+  };
+
   return (
     <section className="portal">
       <Sidebar />
@@ -9,36 +54,57 @@ function Dashboard() {
       <div className="portal__content">
         <div className="portal__content-header">
           <h1>My Video Requests</h1>
-          <button className="btn btn-primary portal__new-btn">
+          <button
+            className="btn btn-primary portal__new-btn"
+            onClick={() => navigate("/requests/new")}
+            type="button"
+          >
             New Request +
           </button>
         </div>
 
-        <table className="requests-table">
-          <thead>
-            <tr>
-              <th>Project ID</th>
-              <th>Package</th>
-              <th>Event Date</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {/* Placeholder row until backend is wired */}
-            <tr>
-              <td>–</td>
-              <td>–</td>
-              <td>–</td>
-              <td>–</td>
-              <td>
-                <button className="btn btn-outline btn-sm">
-                  View Details
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {loading && <p>Loading requests…</p>}
+        {error && <p style={{ marginTop: 12 }}>{error}</p>}
+
+        {!loading && !error && (
+          <table className="requests-table">
+            <thead>
+              <tr>
+                <th>Project ID</th>
+                <th>Package</th>
+                <th>Event Date</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+
+            <tbody>
+              {requests.length === 0 ? (
+                <tr>
+                  <td colSpan="5">No requests yet. Click “New Request +”.</td>
+                </tr>
+              ) : (
+                requests.map((r) => (
+                  <tr key={r._id}>
+                    <td>{r._id.slice(-6).toUpperCase()}</td>
+                    <td>{r.serviceType || "—"}</td>
+                    <td>{formatDate(r.dueDate)}</td>
+                    <td>{r.status || "Pending"}</td>
+                    <td>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        type="button"
+                        onClick={() => navigate(`/requests/${r._id}`)}
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </section>
   );
