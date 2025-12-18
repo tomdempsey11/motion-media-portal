@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import api from "../api"; // ✅ use shared axios instance
 
 function NewRequest() {
   const navigate = useNavigate();
@@ -34,34 +35,21 @@ function NewRequest() {
     try {
       setSubmitting(true);
 
-      const res = await fetch("http://localhost:5001/api/requests", {
-        method: "POST",
-        credentials: "include", // ✅ session cookie
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,              // required by backend
-          details: fullDetails, // required by backend
-          serviceType,        // optional
-          dueDate,            // optional (ISO string from <input type="date"> works)
-        }),
+      await api.post("/requests", {
+        title,               // required by backend
+        details: fullDetails, // required by backend
+        serviceType,         // optional
+        dueDate,             // optional
       });
-
-      if (res.status === 401) {
-        navigate("/login");
-        return;
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data?.message || "Failed to submit request");
-        return;
-      }
 
       // success → back to dashboard
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      if (err?.response?.status === 401) {
+        navigate("/login");
+        return;
+      }
+      setError(err?.response?.data?.message || err.message || "Something went wrong");
     } finally {
       setSubmitting(false);
     }

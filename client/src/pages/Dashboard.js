@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import api from "../api"; // ✅ use shared axios instance
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -14,24 +15,14 @@ function Dashboard() {
         setLoading(true);
         setError("");
 
-        const res = await fetch("http://localhost:5001/api/requests", {
-          method: "GET",
-          credentials: "include", // ✅ session cookie
-        });
-
-        if (res.status === 401) {
+        const res = await api.get("/requests"); // ✅ /api/requests via proxy
+        setRequests(res.data?.requests || []);
+      } catch (err) {
+        if (err?.response?.status === 401) {
           navigate("/login");
           return;
         }
-
-        if (!res.ok) {
-          throw new Error("Failed to load requests");
-        }
-
-        const data = await res.json();
-        setRequests(data.requests || []);
-      } catch (err) {
-        setError(err.message || "Something went wrong");
+        setError(err?.response?.data?.message || err.message || "Something went wrong");
       } finally {
         setLoading(false);
       }
@@ -97,11 +88,7 @@ function Dashboard() {
                     <td>{formatDate(r.dueDate)}</td>
 
                     <td>
-                      <span
-                        className={`status-badge status-${statusSlug(
-                          r.status || "Pending"
-                        )}`}
-                      >
+                      <span className={`status-badge status-${statusSlug(r.status || "Pending")}`}>
                         {r.status || "Pending"}
                       </span>
                     </td>
