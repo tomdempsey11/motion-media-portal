@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../context/AuthContext";
 
-const STATUS_OPTIONS = ["pending", "in_progress", "completed", "cancelled"];
+const STATUS_OPTIONS = ["Pending", "In Progress", "Delivered"];
 
 function RequestDetails() {
   const { id } = useParams();
@@ -20,12 +20,19 @@ function RequestDetails() {
   const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
+    // IMPORTANT: wait until auth state is known (so isAdmin is correct)
+    if (authLoading) return;
+
     const load = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const res = await fetch(`http://localhost:5001/api/requests/${id}`, {
+        const url = isAdmin
+          ? `http://localhost:5001/api/admin/requests/${id}`
+          : `http://localhost:5001/api/requests/${id}`;
+
+        const res = await fetch(url, {
           credentials: "include",
         });
 
@@ -37,8 +44,11 @@ function RequestDetails() {
         if (!res.ok) throw new Error("Failed to load request");
 
         const data = await res.json();
-        setRequest(data.request);
-        setStatusDraft(data.request?.status || "");
+
+        // admin endpoint might return { request } or something slightly different
+        const req = data.request || data;
+        setRequest(req);
+        setStatusDraft(req?.status || "");
       } catch (err) {
         setError(err.message || "Something went wrong");
       } finally {
@@ -47,7 +57,7 @@ function RequestDetails() {
     };
 
     load();
-  }, [id, navigate]);
+  }, [id, navigate, isAdmin, authLoading]);
 
   const handleSaveStatus = async () => {
     if (!request?._id) return;
@@ -56,15 +66,16 @@ function RequestDetails() {
       setSavingStatus(true);
       setStatusError("");
 
-      const res = await fetch(
-        `http://localhost:5001/api/requests/${request._id}/status`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ status: statusDraft }),
-        }
-      );
+      const url = isAdmin
+        ? `http://localhost:5001/api/admin/requests/${request._id}/status`
+        : `http://localhost:5001/api/requests/${request._id}/status`;
+
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: statusDraft }),
+      });
 
       if (res.status === 401) {
         navigate("/login");
@@ -92,6 +103,12 @@ function RequestDetails() {
     return d.toLocaleDateString();
   };
 
+  const statusSlug = (s) =>
+    String(s || "")
+      .toLowerCase()
+      .replaceAll("_", "-")
+      .replace(/\s+/g, "-");
+
   // Optional: prevents a "client sidebar flash" while auth loads
   if (authLoading) {
     return (
@@ -112,7 +129,7 @@ function RequestDetails() {
         <button
           className="btn btn-outline"
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")}
         >
           ← Back
         </button>
@@ -138,7 +155,7 @@ function RequestDetails() {
                     >
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s} value={s}>
-                          {s.replaceAll("_", " ")}
+                          {s}
                         </option>
                       ))}
                     </select>
@@ -159,10 +176,10 @@ function RequestDetails() {
                   </>
                 ) : (
                   <span
-                    className={`status-badge status-${request.status}`}
+                    className={`status-badge status-${statusSlug(request.status)}`}
                     style={{ marginLeft: 8 }}
                   >
-                    {request.status?.replaceAll("_", " ")}
+                    {request.status}
                   </span>
                 )}
               </p>
@@ -170,9 +187,11 @@ function RequestDetails() {
               <p>
                 <strong>Package:</strong> {request.serviceType || "—"}
               </p>
+
               <p>
                 <strong>Event Date:</strong> {formatDate(request.dueDate)}
               </p>
+
               <p style={{ whiteSpace: "pre-wrap" }}>
                 <strong>Details:</strong>
                 {"\n"}

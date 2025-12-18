@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 
 function AdminDashboard() {
@@ -79,6 +79,23 @@ function AdminDashboard() {
     return d.toLocaleDateString();
   };
 
+  const getUserName = (userId) => {
+    if (userId && typeof userId === "object") {
+      const fullName =
+        userId.name ||
+        [userId.firstName, userId.lastName].filter(Boolean).join(" ");
+      return fullName || "Unnamed User";
+    }
+    return String(userId || "").slice(-6).toUpperCase() || "—";
+  };
+
+  const getUserEmail = (userId) => {
+    if (userId && typeof userId === "object") {
+      return userId.email || "";
+    }
+    return "";
+  };
+
   return (
     <section className="portal">
       <Sidebar />
@@ -99,29 +116,51 @@ function AdminDashboard() {
                 <th>Package</th>
                 <th>Event Date</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
+
             <tbody>
               {requests.length === 0 ? (
                 <tr>
-                  <td colSpan="5">No requests found.</td>
+                  <td colSpan="6">No requests found.</td>
                 </tr>
               ) : (
                 requests.map((r) => (
                   <tr key={r._id}>
                     <td>{r.title}</td>
-                    <td>{String(r.userId).slice(-6).toUpperCase()}</td>
+
+                    <td>
+                      <div className="user-cell">
+                        <div className="user-name">{getUserName(r.userId)}</div>
+                        {getUserEmail(r.userId) && (
+                          <div className="user-email">{getUserEmail(r.userId)}</div>
+                        )}
+                      </div>
+                    </td>
+
                     <td>{r.serviceType || "—"}</td>
                     <td>{formatDate(r.dueDate)}</td>
+
                     <td>
-                      <select
+                        <select
+                        className={`status-select status-${r.status
+                            .toLowerCase()
+                            .replace(/\s+/g, "-")}`}
                         value={r.status}
                         onChange={(e) => updateStatus(r._id, e.target.value)}
-                      >
+                        >
+
                         <option value="Pending">Pending</option>
                         <option value="In Progress">In Progress</option>
                         <option value="Delivered">Delivered</option>
                       </select>
+                    </td>
+
+                    <td>
+                      <Link className="btn btn-outline" to={`/requests/${r._id}`}>
+                        View Details
+                      </Link>
                     </td>
                   </tr>
                 ))

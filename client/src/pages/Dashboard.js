@@ -47,6 +47,12 @@ function Dashboard() {
     return d.toLocaleDateString();
   };
 
+  const statusSlug = (s) =>
+    String(s || "Pending")
+      .toLowerCase()
+      .replaceAll("_", "-")
+      .replace(/\s+/g, "-");
+
   return (
     <section className="portal">
       <Sidebar />
@@ -89,7 +95,17 @@ function Dashboard() {
                     <td>{r._id.slice(-6).toUpperCase()}</td>
                     <td>{r.serviceType || "—"}</td>
                     <td>{formatDate(r.dueDate)}</td>
-                    <td>{r.status || "Pending"}</td>
+
+                    <td>
+                      <span
+                        className={`status-badge status-${statusSlug(
+                          r.status || "Pending"
+                        )}`}
+                      >
+                        {r.status || "Pending"}
+                      </span>
+                    </td>
+
                     <td>
                       <button
                         className="btn btn-outline btn-sm"

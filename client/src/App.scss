@@ -462,3 +462,60 @@
   background: rgba(255, 80, 80, 0.18);
   color: #ffb2b2;
 }
+
+
+/* =========================
+   Status Select Colors
+========================= */
+
+.status-select {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+/* Pending */
+.status-pending {
+  background-color: #fff7e6;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+/* In Progress */
+.status-in-progress {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* Delivered */
+.status-delivered {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+
+
+
+/* ==============================
+   admin dashboard
+   ============================== */
+
+
+.user-cell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.user-email {
+  font-size: 12px;
+  opacity: 0.7;
+}
