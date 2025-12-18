@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { useAuth } from "../context/AuthContext";
+import api from "../api";
 
 const STATUS_OPTIONS = ["Pending", "In Progress", "Delivered"];
 
@@ -20,7 +21,6 @@ function RequestDetails() {
   const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
-    // IMPORTANT: wait until auth state is known (so isAdmin is correct)
     if (authLoading) return;
 
     const load = async () => {
@@ -28,29 +28,18 @@ function RequestDetails() {
         setLoading(true);
         setError("");
 
-        const url = isAdmin
-          ? `http://localhost:5001/api/admin/requests/${id}`
-          : `http://localhost:5001/api/requests/${id}`;
+        const path = isAdmin ? `/admin/requests/${id}` : `/requests/${id}`;
+        const res = await api.get(path);
 
-        const res = await fetch(url, {
-          credentials: "include",
-        });
-
-        if (res.status === 401) {
-          navigate("/login");
-          return;
-        }
-
-        if (!res.ok) throw new Error("Failed to load request");
-
-        const data = await res.json();
-
-        // admin endpoint might return { request } or something slightly different
-        const req = data.request || data;
+        const req = res.data?.request || res.data;
         setRequest(req);
         setStatusDraft(req?.status || "");
       } catch (err) {
-        setError(err.message || "Something went wrong");
+        if (err?.response?.status === 401) {
+          navigate("/login");
+          return;
+        }
+        setError(err?.response?.data?.message || err.message || "Failed to load request");
       } finally {
         setLoading(false);
       }
@@ -66,31 +55,21 @@ function RequestDetails() {
       setSavingStatus(true);
       setStatusError("");
 
-      const url = isAdmin
-        ? `http://localhost:5001/api/admin/requests/${request._id}/status`
-        : `http://localhost:5001/api/requests/${request._id}/status`;
+      const path = isAdmin
+        ? `/admin/requests/${request._id}/status`
+        : `/requests/${request._id}/status`;
 
-      const res = await fetch(url, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: statusDraft }),
-      });
+      const res = await api.patch(path, { status: statusDraft });
 
-      if (res.status === 401) {
+      const updated = res.data?.request || res.data?.updatedRequest || res.data;
+      setRequest(updated);
+      setStatusDraft(updated?.status || statusDraft);
+    } catch (err) {
+      if (err?.response?.status === 401) {
         navigate("/login");
         return;
       }
-
-      if (!res.ok) throw new Error("Failed to update status");
-
-      const data = await res.json();
-      const updated = data.request || data.updatedRequest || data;
-
-      setRequest(updated);
-      setStatusDraft(updated.status || statusDraft);
-    } catch (err) {
-      setStatusError(err.message || "Could not update status");
+      setStatusError(err?.response?.data?.message || err.message || "Could not update status");
     } finally {
       setSavingStatus(false);
     }
@@ -109,7 +88,6 @@ function RequestDetails() {
       .replaceAll("_", "-")
       .replace(/\s+/g, "-");
 
-  // Optional: prevents a "client sidebar flash" while auth loads
   if (authLoading) {
     return (
       <section className="portal">
@@ -170,9 +148,7 @@ function RequestDetails() {
                       {savingStatus ? "Saving..." : "Save"}
                     </button>
 
-                    {statusError && (
-                      <span style={{ marginLeft: 10 }}>{statusError}</span>
-                    )}
+                    {statusError && <span style={{ marginLeft: 10 }}>{statusError}</span>}
                   </>
                 ) : (
                   <span

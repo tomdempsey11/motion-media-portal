@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import api from "../api";
 
 function AdminRoute({ children }) {
   const [loading, setLoading] = useState(true);
@@ -8,17 +9,10 @@ function AdminRoute({ children }) {
   useEffect(() => {
     const run = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/auth/me", {
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          setIsAdmin(false);
-          return;
-        }
-
-        const data = await res.json();
-        setIsAdmin(data?.user?.role === "admin");
+        const res = await api.get("/auth/me"); // ✅ no /api here
+        setIsAdmin(res.data?.user?.role === "admin");
+      } catch (err) {
+        setIsAdmin(false);
       } finally {
         setLoading(false);
       }

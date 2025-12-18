@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import api from "../api"; // ✅ use the axios instance (baseURL + cookies)
 
 function Navbar() {
   const navigate = useNavigate();
@@ -10,23 +11,15 @@ function Navbar() {
 
   const loadMe = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/auth/me", {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        setUser(null);
-        return;
-      }
-
-      const data = await res.json();
-      setUser(data.user);
+      // api baseURL already includes /api, so DO NOT add /api here
+      const res = await api.get("/auth/me");
+      setUser(res.data.user);
     } catch (err) {
       setUser(null);
     }
   };
 
-  // ✅ Refresh user state when navigation happens (login/logout/redirects)
+  // Refresh on route changes so navbar updates after login/logout
   useEffect(() => {
     loadMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -41,12 +34,7 @@ function Navbar() {
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-
-      await fetch("http://localhost:5001/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-
+      await api.post("/auth/logout");
       setUser(null);
       navigate("/login");
     } catch (err) {
@@ -61,9 +49,7 @@ function Navbar() {
     <header className="navbar">
       <div className="navbar__logo" onClick={() => navigate("/")}>
         Motion<span>Media</span>
-        {user?.role === "admin" && (
-          <span className="navbar__badge">ADMIN</span>
-        )}
+        {user?.role === "admin" && <span className="navbar__badge">ADMIN</span>}
       </div>
 
       <nav className="navbar__nav">

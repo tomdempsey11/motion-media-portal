@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import api from "../api";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -15,32 +16,25 @@ function AdminDashboard() {
         setError("");
 
         // Ensure logged in + admin
-        const meRes = await fetch("http://localhost:5001/api/auth/me", {
-          credentials: "include",
-        });
+        const meRes = await api.get("/auth/me");
 
-        if (meRes.status === 401) {
-          navigate("/login");
-          return;
-        }
-
-        const meData = await meRes.json();
-        if (meData?.user?.role !== "admin") {
+        if (meRes?.data?.user?.role !== "admin") {
           navigate("/dashboard");
           return;
         }
 
         // Load all requests
-        const res = await fetch("http://localhost:5001/api/admin/requests", {
-          credentials: "include",
-        });
-
-        if (!res.ok) throw new Error("Failed to load admin requests");
-
-        const data = await res.json();
-        setRequests(data.requests || []);
+        const res = await api.get("/admin/requests");
+        setRequests(res.data?.requests || []);
       } catch (err) {
-        setError(err.message || "Something went wrong");
+        const status = err?.response?.status;
+
+        if (status === 401) {
+          navigate("/login");
+          return;
+        }
+
+        setError(err?.response?.data?.message || err.message || "Something went wrong");
       } finally {
         setLoading(false);
       }
@@ -51,24 +45,13 @@ function AdminDashboard() {
 
   const updateStatus = async (id, status) => {
     try {
-      const res = await fetch(
-        `http://localhost:5001/api/admin/requests/${id}/status`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to update status");
+      await api.patch(`/admin/requests/${id}/status`, { status });
 
       setRequests((prev) =>
         prev.map((r) => (r._id === id ? { ...r, status } : r))
       );
     } catch (err) {
-      alert(err.message);
+      alert(err?.response?.data?.message || err.message || "Failed to update status");
     }
   };
 
@@ -95,6 +78,11 @@ function AdminDashboard() {
     }
     return "";
   };
+
+  const statusClass = (s) =>
+    String(s || "Pending")
+      .toLowerCase()
+      .replace(/\s+/g, "-");
 
   return (
     <section className="portal">
@@ -143,14 +131,11 @@ function AdminDashboard() {
                     <td>{formatDate(r.dueDate)}</td>
 
                     <td>
-                        <select
-                        className={`status-select status-${r.status
-                            .toLowerCase()
-                            .replace(/\s+/g, "-")}`}
+                      <select
+                        className={`status-select status-${statusClass(r.status)}`}
                         value={r.status}
                         onChange={(e) => updateStatus(r._id, e.target.value)}
-                        >
-
+                      >
                         <option value="Pending">Pending</option>
                         <option value="In Progress">In Progress</option>
                         <option value="Delivered">Delivered</option>
