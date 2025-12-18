@@ -7,18 +7,11 @@ function Login() {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
   const onChange = (e) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const onSubmit = async (e) => {
@@ -26,24 +19,14 @@ function Login() {
     setError("");
 
     try {
-      // ✅ 1) Login (baseURL already includes /api)
       await api.post("/auth/login", form);
 
-      // ✅ 2) Refresh context user
-      await refreshUser();
+      const me = await refreshUser(); // ✅ returns user or null
+      if (!me) throw new Error("Login failed");
 
-      // ✅ 3) Get role from /me (guaranteed in sync with cookies)
-      const meRes = await api.get("/auth/me");
-      const role = meRes?.data?.user?.role;
-
-      // ✅ 4) Redirect
-      if (role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate(me.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
-      setError(err?.response?.data?.message || "Login failed");
+      setError(err?.response?.data?.message || err.message || "Login failed");
     }
   };
 
@@ -55,31 +38,17 @@ function Login() {
           Log in to view your projects, submit new requests, and track delivery.
         </p>
 
-        {error && (
-          <p style={{ color: "crimson", marginBottom: "1rem" }}>{error}</p>
-        )}
+        {error && <p style={{ color: "crimson", marginBottom: "1rem" }}>{error}</p>}
 
         <form className="auth-form" onSubmit={onSubmit}>
           <label>
             Email
-            <input
-              type="email"
-              name="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={onChange}
-            />
+            <input type="email" name="email" value={form.email} onChange={onChange} />
           </label>
 
           <label>
             Password
-            <input
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={onChange}
-            />
+            <input type="password" name="password" value={form.password} onChange={onChange} />
           </label>
 
           <button type="submit" className="btn btn-primary auth-form__submit">

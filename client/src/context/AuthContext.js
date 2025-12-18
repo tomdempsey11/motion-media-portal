@@ -9,15 +9,12 @@ export function AuthProvider({ children }) {
 
   const refreshUser = async () => {
     try {
-      setAuthLoading(true);
-
-      // ✅ uses axios baseURL + withCredentials automatically
-      const res = await api.get("/auth/me");
-
+      const res = await api.get("/auth/me"); // baseURL already includes /api
       setUser(res.data.user);
+      return res.data.user;
     } catch (err) {
-      // 401 or any error -> treat as logged out
       setUser(null);
+      return null;
     } finally {
       setAuthLoading(false);
     }
@@ -25,14 +22,23 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      setUser(null);
+    }
+  };
 
   const value = useMemo(
     () => ({
       user,
-      setUser,
       authLoading,
       refreshUser,
+      logout,
       isAdmin: user?.role === "admin",
       isLoggedIn: !!user,
     }),

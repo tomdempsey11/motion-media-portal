@@ -1,44 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import api from "../api"; // ✅ use the axios instance (baseURL + cookies)
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const [user, setUser] = useState(null);
+  const { user, authLoading, refreshUser, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const loadMe = async () => {
-    try {
-      // api baseURL already includes /api, so DO NOT add /api here
-      const res = await api.get("/auth/me");
-      setUser(res.data.user);
-    } catch (err) {
-      setUser(null);
-    }
-  };
-
-  // Refresh on route changes so navbar updates after login/logout
+  // ✅ On first mount, ensure navbar has correct user (covers hard refresh)
   useEffect(() => {
-    loadMe();
+    // AuthProvider already calls refreshUser() on mount,
+    // but calling it here is harmless and helps in edge cases.
+    refreshUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, []);
 
-  const dashboardPath = !user
-    ? "/login"
-    : user.role === "admin"
-    ? "/admin"
-    : "/dashboard";
+  const dashboardPath =
+    !user ? "/login" : user.role === "admin" ? "/admin" : "/dashboard";
 
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-      await api.post("/auth/logout");
-      setUser(null);
-      navigate("/login");
-    } catch (err) {
-      setUser(null);
+      await logout(); // ✅ calls /auth/logout + clears user
       navigate("/login");
     } finally {
       setLoggingOut(false);
@@ -59,7 +42,7 @@ function Navbar() {
 
         <NavLink to={dashboardPath}>Dashboard</NavLink>
 
-        {!user ? (
+        {authLoading ? null : !user ? (
           <>
             <NavLink to="/login">Client Login</NavLink>
             <NavLink to="/signup">Create Account</NavLink>
@@ -75,7 +58,9 @@ function Navbar() {
           </button>
         )}
 
-        <button className="navbar__contact-btn">Contact</button>
+        <button className="navbar__contact-btn" type="button">
+          Contact
+        </button>
       </nav>
     </header>
   );
