@@ -9,13 +9,31 @@ const connectDB = require("./config/db");
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// ✅ Needed on most hosts (Render/Railway/etc.) so secure cookies work properly
+app.set("trust proxy", 1);
+
 // Connect to MongoDB
 connectDB();
+
+const isProd = process.env.NODE_ENV === "production";
+
+// ✅ Allow both localhost + deployed frontend (from env var)
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN, // e.g. https://your-frontend.netlify.app
+  "http://localhost:3000",
+].filter(Boolean);
 
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (Postman, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      return callback(new Error("Not allowed by CORS: " + origin));
+    },
     credentials: true,
   })
 );
@@ -41,16 +59,14 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: isProd, // ✅ true in production (HTTPS)
+      sameSite: isProd ? "none" : "lax", // ✅ allow cross-site cookies in prod
       maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   })
 );
 
-
 app.use("/api/admin", require("./routes/admin"));
-
 
 // Routes
 app.get("/api/health", (req, res) => {
